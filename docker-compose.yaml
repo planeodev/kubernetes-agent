@@ -16,7 +16,7 @@
 ####
 services:
   kubernetes-agent:
-    image: kubernetes-agent:local
+    image: planeodev/kubernetes-agent
 
     build:
       context: .

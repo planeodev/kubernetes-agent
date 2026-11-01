@@ -1,0 +1,38 @@
+####
+#### Kubernetes Agent — Docker Compose (build target + local run)
+####
+#### Primary role: this is the `docker buildx bake` target consumed by the vionix
+#### multi-arch CI/CD workflow (.github/workflows/docker-multiarch-cicd.yaml), which
+#### builds and publishes ghcr.io/planeodev/kubernetes-agent:<ref-slug>-<short-sha>.
+#### It mirrors the convention used by the referenced Kubernetes MCP server repo.
+####
+#### It is also runnable locally for development:
+####   GOOGLE_API_KEY=... docker compose up --build
+#### Then the agent's HTTP server is at http://localhost:9791/ (container :8080).
+####
+#### Model: defaults to a single Gemini model (GEMINI_MODEL) using GOOGLE_API_KEY.
+#### Multi-model (Gemini + local vLLM/Gemma) and Claude/other providers are wired at
+#### deploy time (see the platform's kagent ModelConfig), not in this build compose.
+####
+services:
+  kubernetes-agent:
+    image: planeodev/kubernetes-agent
+
+    build:
+      context: .
+
+    ports:
+      # Unique host port (the referenced MCP server uses 9790); container listens
+      # on 8080 (server.port in application.properties / Dockerfile EXPOSE).
+      - "9791:8080"
+
+    restart: unless-stopped
+
+    environment:
+      # Gemini via Google AI Studio API key (required for the default single-model
+      # run). Provide it in a .env file or the shell environment.
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3-flash-preview}
+      # Keep the local run single-model; multi-model needs an in-cluster vLLM.
+      ENABLE_MULTI_MODEL: ${ENABLE_MULTI_MODEL:-false}
+      JAVA_TOOL_OPTIONS: "-Djava.net.preferIPv4Stack=true"
